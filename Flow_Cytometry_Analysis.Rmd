@@ -1259,4 +1259,9 @@ cob_P <- cob %>% dplyr::filter(S_P == "P")
 
 t.test(cob_P$ug_per_cell, cob_S$ug_per_cell)
 ```
+# Session Info
+
+```{r}
+sessionInfo()
+```
 
