@@ -2,7 +2,13 @@
 title: "Flow Cytometry Analysis"
 author: "Maggi Brisbin"
 date: "7/25/2022"
-output: html_document
+output: 
+    html_document:
+       number_sections: no
+       theme: cerulean
+       toc: yes
+       toc_depth: 6
+       toc_float: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -10,8 +16,9 @@ knitr::opts_chunk$set(cache = TRUE, warning = FALSE,
                       message = FALSE, cache.lazy = FALSE)
 ```
 
-# packages
+**Packages**
 
+load all necessary packages:
 ```{r}
 library(flowCore)
 library(ggcyto)
@@ -22,6 +29,7 @@ library(ggpubr)
 library(flowStats)
 library(kableExtra)
 library(magick)
+library(patchwork)
 
 "%ni%" <- Negate("%in%")
 ```
@@ -29,8 +37,9 @@ library(magick)
 
 # Trial 1
 
+## Data
 Load Flow Cytometry data:
-```{r load trial 1 data, cache=TRUE}
+```{r load trial 1 data, eval=FALSE}
 rnd1fs1<- read.flowSet(path = "20220803_BACTB12_3_1_1200/", pattern = ".fcs",alter.names = T)
 rnd1fs2 <- read.flowSet(path = "20220803_BactB12_3_1_1500/", pattern = ".fcs",alter.names = T)
 rnd1fs3 <- read.flowSet(path = "20220803_bactB12_3_1_2100/", pattern = ".fcs",alter.names = T)
@@ -39,7 +48,7 @@ rnd1fs5 <- read.flowSet(path = "20220804_bactb12_3_2_1200/", pattern = ".fcs",al
 ```
 
 Add sample names for each run:
-```{r}
+```{r, eval=FALSE}
 samples <- c( "Rpom_full_cold_1", "Rpom_full_cold_2", "Rpom_full_cold_3","Amac_full_cold_1", "Amac_full_cold_2", "Amac_full_cold_3",  "Rpom_noB12_cold_1", "Rpom_noB12_cold_2", "Rpom_noB12_cold_3", "Amac_noB12_cold_1", "Amac_noB12_cold_2","Amac_noB12_cold_3",
 "Rpom_full_med_1", "Rpom_full_med_2", "Rpom_full_med_3", "Amac_full_med_1", "Amac_full_med_2", "Amac_full_med_3",
 "Rpom_noB12_med_1", "Rpom_noB12_med_2", "Rpom_noB12_med_3", "Amac_noB12_med_1", "Amac_noB12_med_2", "Amac_noB12_med_3",
@@ -55,52 +64,62 @@ pData(rnd1fs5)$well <- paste0(samples, "_5")
 ```
 
 Create gate for live cells:
-```{r}
+```{r, eval=FALSE}
 g.singlets <- polygonGate(filterId = "Singlets","FL1.A"=c(3e3,1e6,1e6, 3e3),"FL3.A"=c(0,5000, 1e5, 1200)) # define gate
 ```
 
 Create log version of gate for plotting and plot log transformed data with log transformed gate:
-```{r}
+```{r, eval=FALSE}
 logg.singlets <- polygonGate(filterId = "Singlets", "FL1.A"=c(log(3e3),log(1e6), log(1e6), log(3e3)),"FL3.A"=c(4, log(5000), log(1e5), log(1200))) 
 
 autoplot(transform(rnd1fs1[[1]], `FL1.A` =log(`FL1.A` ), `FL3.A` =log(`FL3.A` ) ), "FL1.A","FL3.A", bins = 400, gate = logg.singlets) +geom_gate(logg.singlets) +geom_stats(type = c("percent", "count"))
 ```
 
+![](rnd1_gate1.png)
 
 Filter flowSet based on gate and then replot: (sanity check)
-```{r}
+```{r, eval=FALSE}
 filteredresult <- flowCore::Subset(rnd1fs1,g.singlets)
 
 autoplot(transform(filteredresult[[1]], `FL1.A` =log(`FL1.A` ), `FL3.A` =log(`FL3.A` ) ), "FL1.A","FL3.A", bins = 400, gate = logg.singlets) +geom_gate(logg.singlets) +geom_stats(type = c("percent"))
 ```
 
+![](rnd1_gate1_subset.png)
 
-```{r}
+plot  gate for an entire plate:
+```{r, eval=FALSE}
 autoplot(transform(filteredresult, `FL1.A` =log(`FL1.A` ), `FL3.A` =log(`FL3.A` ) ), "FL1.A","FL3.A", bins = 400, gate = logg.singlets) +geom_gate(logg.singlets) 
 ```
-Make a forward scatter gate:
-```{r}
-rg1 <- rectangleGate("FSC.A"=c(100, 100000), filterId="NonDebris")
 
+![](rnd1_gate1_wholeplate.png)
+
+Make a forward scatter gate:
+```{r, eval=FALSE}
+rg1 <- rectangleGate("FSC.A"=c(100, 100000), filterId="NonDebris")
 ```
+
 Check forward scatter gate:
-```{r}
+```{r, eval=FALSE}
 autoplot(rnd1fs1[[5]], x = "FSC.A") +geom_gate(rg1) +geom_stats()
 ```
 
+![](rnd1_gate2.png)
+
 Filter based on forward scatter: 
-```{r, cache=TRUE}
+```{r, eval=FALSE}
 filteredresult <- flowCore::Subset(rnd1fs1,g.singlets)
 filteredresult2 <- flowCore::Subset(filteredresult,rg1)
 ```
 
 plot filtered forward scatter (sanity check):
-```{r}
+```{r, eval=FALSE}
 ggcyto(filteredresult2, aes(x = "FSC.A")) +geom_gate(rg1) +geom_density()
 ```
 
+![](rnd1_gate2_wholeplate.png)
+
 Get the total volume injected into the instrument for each sample at each time point and save as a character vector: 
-```{r}
+```{r, eval=FALSE}
 rnd1vols1<- c()
 for (i in 1:length(samples)) {
   rnd1vols1[i] = rnd1fs1[[i]]@description["$VOL"][[1]]
@@ -129,7 +148,7 @@ for (i in 1:length(samples)) {
 
 Create gatingset from filtered flowset to get event counts for each treatment at each time point.
 Add a volume column using the volume vectors for each day. 
-```{r, cache=TRUE}
+```{r, eval=FALSE}
 #1
 filtered_gs1 <- GatingSet(filteredresult2)
 gs_pop_add(filtered_gs1,g.singlets) # add gate to GatingSet
@@ -185,7 +204,7 @@ filtered_ps5$vol <- rnd1vols5
 ```
 
 Bind together count frames and create new column for volume in µl. Divide counts by volume to normalize. Separate names to get columns for grouping and faceting. Add factors for temperature. 
-```{r}
+```{r, eval=FALSE}
 results_t1 <- rbind(filtered_ps1, filtered_ps2, filtered_ps3, filtered_ps4, filtered_ps5)
 
 results_t1$vol_ul <- as.numeric(results_t1$vol) / 1000
@@ -197,9 +216,10 @@ results_t1 <- results_t1 %>% separate(well,c("Species", "Media", "Temp", "Rep", 
 results_t1$Temp <- factor(results_t1$Temp, levels = c("cold", "med", "hot"))
 ```
 
-### Growth Curve Plot
+## Growth Curve Plot
+
 Convert "time points" to hours and plot growth curve: 
-```{r}
+```{r, eval=FALSE}
 r2_t1<- results_t1 %>% 
   mutate(hours = case_when(
     Time_point == 1 ~ 3,
@@ -208,14 +228,22 @@ r2_t1<- results_t1 %>%
     Time_point == 4 ~ 24,
     Time_point == 5 ~ 27)) 
 
+write.csv(r2_t1, "r2_t1.csv", row.names = FALSE)
+```
+
+
+```{r}
+r2_t1<- read.csv("r2_t1.csv")
+
+r2_t1$Temp <- factor(r2_t1$Temp, levels = c("cold", "med", "hot"))
+
 r2_t1 %>% 
   group_by(hours, Media, Species, Temp) %>%
   dplyr::summarize(mean_cells_per_ul = mean(cells_per_ul), sd = sd(cells_per_ul)) %>% ggplot(aes(x = hours, y = mean_cells_per_ul, color = Temp, shape = Media)) + facet_grid(Temp~Species) + geom_point(size =2, alpha = .7) + theme_bw() + scale_color_manual(values = c("#2D55CC", "#FAAB33", "#FF4041"))  +geom_line(aes(linetype = Media))+
   geom_errorbar(aes(ymin=mean_cells_per_ul-sd, ymax=mean_cells_per_ul+sd), width=0) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 ```
-ggsave("results2_means.pdf", width = 4, height = 5)
 
-#### log scale
+### log scale
 
 plot with Log scale on y-axis:
 ```{r}
@@ -225,9 +253,9 @@ r2_t1 %>%
     geom_line(aes(linetype = Media))+
   geom_errorbar(aes(ymin=mean_cells_per_ul-sd, ymax=mean_cells_per_ul+sd), width=0) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+ scale_y_log10()
 ```
-ggsave("t1_log_growthcurve.pdf", width = 7, height = 6)
 
-## Maximum cell counts
+## Max cell counts (biomass)
+
 Get and plot maximum cell concentrations:
 
 ```{r}
@@ -249,55 +277,56 @@ df_points <- data.frame(r2_t1 %>%
 ggplot() + geom_point(data = df_mean, aes(x = Media, y = mean_max_cells, color = Media), size =10, shape ="-") + theme_bw() + scale_color_manual(values = c( "black", "#6495ed"))+ geom_errorbar(data = df_sd, aes(x = Media, y = mean_max_cells, ymin=ymin, ymax=ymax, color = Media), width=0) + geom_jitter(data =df_points, aes(x =Media, y = max_cells_per_ul, color = Media), shape = 1, width = 0.114, fill = "white") +facet_grid(Species~ Temp, scales = "free_y") + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + ggtitle("Trial 1")
 
 ```
-ggsave("t1_maxcells_mean_dots.pdf", width = 5, height = 6)
 
 
-#### stats
+### biomass stats
+
+#### Amac
 
 ```{r}
 amac_biomass <- df_points %>% dplyr::filter(Species == "Amac")
 amac_biomass$TempMedia <- paste(amac_biomass$Media, amac_biomass$Temp)
 ```
 
-Amac cold
+Amac biomass difference by media in **cold** temp treatment:
 ```{r}
 amac_biomass_cold_noB12 <- amac_biomass %>% dplyr::filter(TempMedia == "noB12 cold")
 amac_biomass_cold_full <- amac_biomass %>% dplyr::filter(TempMedia == "full cold")
 t.test(amac_biomass_cold_noB12$max_cells_per_ul, amac_biomass_cold_full$max_cells_per_ul)
 ```
-Amac Mid
+Amac biomass difference by media in **mid** temp treatment:
 ```{r}
 amac_biomass_mid_noB12 <- amac_biomass %>% dplyr::filter(TempMedia == "noB12 med")
 amac_biomass_mid_full <- amac_biomass %>% dplyr::filter(TempMedia == "full med")
 t.test(amac_biomass_mid_noB12$max_cells_per_ul, amac_biomass_mid_full$max_cells_per_ul)
 ```
-Amac Hot
+Amac biomass difference by media in **hot** temp treatment:
 ```{r}
 amac_biomass_hot_noB12 <- amac_biomass %>% dplyr::filter(TempMedia == "noB12 hot")
 amac_biomass_hot_full <- amac_biomass %>% dplyr::filter(TempMedia == "full hot")
 t.test(amac_biomass_hot_noB12$max_cells_per_ul, amac_biomass_hot_full$max_cells_per_ul)
 ```
 
-Rpom
+#### Rpom
 ```{r}
 rpom_biomass <- df_points %>% dplyr::filter(Species == "Rpom")
 rpom_biomass$TempMedia <- paste(rpom_biomass$Media, rpom_biomass$Temp)
 ```
 
-Rpom cold
+Rpom biomass difference by media in **cold** temp treatment:
 ```{r}
 rpom_biomass_cold_noB12 <- rpom_biomass %>% dplyr::filter(TempMedia == "noB12 cold")
 rpom_biomass_cold_full <- rpom_biomass %>% dplyr::filter(TempMedia == "full cold")
 t.test(rpom_biomass_cold_noB12$max_cells_per_ul, rpom_biomass_cold_full$max_cells_per_ul)
 ```
-Rpom Mid
+Rpom biomass difference by media in **mid** temp treatment:
 ```{r}
 rpom_biomass_mid_noB12 <- rpom_biomass %>% dplyr::filter(TempMedia == "noB12 med")
 rpom_biomass_mid_full <- rpom_biomass %>% dplyr::filter(TempMedia == "full med")
 t.test(rpom_biomass_mid_noB12$max_cells_per_ul, rpom_biomass_mid_full$max_cells_per_ul)
 ```
 
-Rpom Hot
+Rpom biomass difference by media in **hot** temp treatment:
 ```{r}
 rpom_biomass_hot_noB12 <- rpom_biomass %>% dplyr::filter(TempMedia == "noB12 hot")
 rpom_biomass_hot_full <- rpom_biomass %>% dplyr::filter(TempMedia == "full hot")
@@ -305,11 +334,11 @@ t.test(rpom_biomass_hot_noB12$max_cells_per_ul, rpom_biomass_hot_full$max_cells_
 ```
 
 
-## cell size
+## Cell size
 
-#### mean
+get mean cell sizes:
 
-```{r, cache=TRUE}
+```{r, eval = FALSE}
 FSC1<- data.frame(fsApply(filteredresult2,each_col,mean))
 FSC2<- data.frame(fsApply(fr2_2,each_col,mean))
 FSC3<- data.frame(fsApply(fr2_3,each_col,mean))
@@ -324,11 +353,6 @@ FSC5$well <- paste0(samples, "_5")
 
 Fscatter_t1<- rbind(FSC1,FSC2,FSC3,FSC4,FSC5) %>% separate(well,c("Species", "Media", "Temp", "Rep", "Time_point"))
 
-Fscatter_t1$Temp <- factor(Fscatter_t1$Temp, levels = c("cold", "med", "hot"))
-```
-
-
-```{r}
 fscatt1<- Fscatter_t1 %>% 
   mutate(hours = case_when(
     Time_point == 1 ~ 3,
@@ -337,17 +361,28 @@ fscatt1<- Fscatter_t1 %>%
     Time_point == 4 ~ 24,
     Time_point == 5 ~ 27)) 
 
+write.csv(fscatt1, "fscatter_rnd1.csv", row.names = FALSE)
+
+```
+
+plot: 
+```{r}
+fscatt1<- read.csv("fscatter_rnd1.csv")
+
+fscatt1$Temp <- factor(fscatt1$Temp, levels = c("cold", "med", "hot"))
+
 fscatt1  %>% 
   group_by(hours, Media, Species, Temp) %>%
   dplyr::summarize(mean_size = mean(FSC.A), sd = sd(FSC.A)) %>% ggplot(aes(x = hours, y = mean_size, color = Temp, shape = Media)) + facet_grid(Temp~Species) + geom_point(size =2, alpha = .7) + theme_bw() + scale_color_manual(values = c("#2D55CC", "#FAAB33", "#FF4041"))  +geom_line(aes(linetype = Media))+
   geom_errorbar(aes(ymin=mean_size-sd, ymax=mean_size+sd), width=0) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 ```
-ggsave("t1_mean_FSC.pdf", width = 7, height = 6)
 
 # Trial 2
 
+## Data
+
 Data import:
-```{r, cache=TRUE}
+```{r, eval = FALSE}
 rnd2fs1<- read.flowSet(path = "20220808_bactb12_4_1_0900/", pattern = ".fcs",alter.names = T)
 rnd2fs2 <- read.flowSet(path = "20220808_BACTB12_4_1_1000//", pattern = ".fcs",alter.names = T)
 rnd2fs3 <- read.flowSet(path = "20220808_bactb12_4_1_1100/", pattern = ".fcs",alter.names = T)
@@ -365,7 +400,7 @@ rnd2fs13 <- read.flowSet(path = "20220809_bactb12_4_2_0900_2/",  pattern = ".fcs
 ```
 
 Add sample names:
-```{r}
+```{r, eval = FALSE}
 sampleNames3 <- c( "Rpom_full_cold_1", "Rpom_full_cold_2", "Rpom_full_cold_3","Amac_full_cold_1", "Amac_full_cold_2", "Amac_full_cold_3",  "Rpom_noB12_cold_1", "Rpom_noB12_cold_2", "Rpom_noB12_cold_3", "Amac_noB12_cold_1", "Amac_noB12_cold_2","Amac_noB12_cold_3",
 "Rpom_full_med_1", "Rpom_full_med_2", "Rpom_full_med_3", "Amac_full_med_1", "Amac_full_med_2", "Amac_full_med_3",
 "Rpom_noB12_med_1", "Rpom_noB12_med_2", "Rpom_noB12_med_3", "Amac_noB12_med_1", "Amac_noB12_med_2", "Amac_noB12_med_3",
@@ -402,38 +437,50 @@ pData(rnd2fs13)$well <- paste0(sampleNames6, "_13")
 ```
 
 Double check gates:
-```{r}
+```{r, eval = FALSE}
 autoplot(transform(rnd2fs1[[1]], `FL1.A` =log(`FL1.A` ), `FL3.A` =log(`FL3.A` ) ), "FL1.A","FL3.A", bins = 400, gate = logg.singlets) +geom_gate(logg.singlets) +geom_stats(type = c("percent", "count"))
 ```
 
+![](rnd2_gate1.png)
+
 
 Filter flowSet based on gate and then replot: (sanity check)
-```{r}
+```{r, eval=FALSE}
 filteredresult <- flowCore::Subset(rnd2fs1, g.singlets)
 
 autoplot(transform(filteredresult[[1]], `FL1.A` =log(`FL1.A` ), `FL3.A` =log(`FL3.A` ) ), "FL1.A","FL3.A", bins = 400, gate = logg.singlets) +geom_gate(logg.singlets) +geom_stats(type = c("percent"))
 ```
 
+![](rnd2_gate1_subset.png)
+
+
 Forward scatter gate:
-```{r}
+```{r, eval = FALSE}
 autoplot(rnd2fs1[[1]], x = "FSC.A") +geom_gate(rg1) +geom_stats()
 ```
 
+![](rnd2_gate2.png)
+
 Filter flowSet based on gate and then replot: (sanity check)
-```{r}
+```{r, eval = FALSE}
 filteredresult <- flowCore::Subset(rnd2fs1,g.singlets)
 filteredresult_2 <- flowCore::Subset(filteredresult, rg1)
 ```
 
-```{r}
+```{r, eval =FALSE}
 autoplot(filteredresult_2[[1]], x = "FSC.A") +geom_gate(rg1)
 ```
 
-```{r}
+![](rnd2_gate2_single.png)
+Whole plate:
+```{r, eval =FALSE}
 ggcyto(filteredresult_2, aes(x = "FSC.A")) +geom_gate(rg1) +geom_density()
 ```
+
+![](rnd2_gate2_wholeplate.png)
+
 Get sample volumes for each time point:
-```{r sample volumes}
+```{r sample volumes, eval = FALSE}
 rnd2vols1<- c()
 for (i in 1:length(sampleNames3)) {
   rnd2vols1[i] = rnd2fs1[[i]]@description["$VOL"][[1]]
@@ -502,7 +549,7 @@ for (i in 1:length(sampleNames6)) {
 
 
 create gating sets for each timepoint:
-```{r, cache=TRUE}
+```{r, eval =FALSE}
 filtered_gs1 <- GatingSet(filteredresult_2)
 gs_pop_add(filtered_gs1,g.singlets) # add gate to GatingSet
 recompute(filtered_gs1)
@@ -651,8 +698,9 @@ filtered_ps13 <- gs_pop_get_count_with_meta(filtered_gs13)
 filtered_ps13$vol <- rnd2vols13
 ```
 ## Growth Curve Plot 
+
 Put together time points into single dataframe, compute concentrations, split sample names for grouping and faceting: 
-```{r}
+```{r, eval =FALSE}
 results <- rbind(filtered_ps1, filtered_ps2, filtered_ps3, filtered_ps4, filtered_ps5, filtered_ps6, filtered_ps7, filtered_ps8, filtered_ps9, filtered_ps10, filtered_ps11, filtered_ps12, filtered_ps13)
 
 results$vol_ul <- as.numeric(results$vol) / 1000
@@ -665,7 +713,7 @@ results$Temp <- factor(results$Temp, levels = c("cold", "med", "hot"))
 ```
 
 convert time points to hours and plot!
-```{r}
+```{r, eval = FALSE}
 r2<- results %>% 
   mutate(hours = case_when(
     Time_point == 1 ~ 0,
@@ -683,13 +731,22 @@ r2<- results %>%
     Time_point == 13 ~ 24
     ))
 
+write.csv(r2, "r2_t2.csv", row.names = FALSE)
+```
+
+
+```{r}
+r2<- read.csv("r2_t2.csv")
+
+r2$Temp <- factor(r2$Temp, levels = c("cold", "med", "hot"))
+
 r2 %>% group_by(hours, Media, Species, Temp) %>%
   dplyr::summarize(mean_cells_per_ul = mean(cells_per_ul), sd = sd(cells_per_ul)) %>% ggplot(aes(x = hours, y = mean_cells_per_ul, color = Temp, shape = Media)) + facet_grid(Temp~Species) + geom_point(size =2, alpha = .7) + theme_bw() + scale_color_manual(values = c("#2D55CC", "#FAAB33", "#FF4041")) + geom_line(aes(linetype = Media))+
   geom_errorbar(aes(ymin=mean_cells_per_ul-sd, ymax=mean_cells_per_ul+sd), width=0) + scale_y_continuous(labels = function(x) format(x, scientific = TRUE))
 
 ```
 
-# log scale
+### log scale
 
 ```{r}
 r2 %>% 
@@ -698,25 +755,29 @@ r2 %>%
    geom_line(aes(linetype = Media))+
   geom_errorbar(aes(ymin=mean_cells_per_ul-sd, ymax=mean_cells_per_ul+sd), width=0) + scale_y_log10() + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + xlim(0, 26)
 ```
-ggsave("t2_log_growthcurve.pdf", width = 7, height = 6)
-
 
 ```{r}
 results_Rpom_Hot_Full <- r2 %>% group_by(hours, Media, Species, Temp) %>%
   dplyr::summarize(mean_cells_per_ul = mean(cells_per_ul), sd = sd(cells_per_ul)) %>% dplyr::filter(Media == "full") %>%  dplyr::filter(Species == "Amac") %>% dplyr::filter(Temp == "hot")
 
+print(results_Rpom_Hot_Full)
+
 results_Rpom_Hot_noB12 <- r2 %>% group_by(hours, Media, Species, Temp) %>%
   dplyr::summarize(mean_cells_per_ul = mean(cells_per_ul), sd = sd(cells_per_ul)) %>% dplyr::filter(Media == "noB12") %>%  dplyr::filter(Species == "Amac") %>% dplyr::filter(Temp == "hot")
+
+print(results_Rpom_Hot_noB12)
+
 ```
 
 biomass reduction 
 
 ```{r}
-(35815 - 27738) / 35815
+(40039 - 31299) / 40039
 ```
 
+22%
 
-## maximum cell counts
+## Max cell counts (biomass)
 
 ```{r}
 df_mean <- data.frame(r2 %>% 
@@ -737,54 +798,54 @@ df_points <- data.frame(r2 %>%
  ggplot() + geom_point(data = df_mean, aes(x = Media, y = mean_max_cells, color = Media), size =10, shape ="-") + theme_bw() + scale_color_manual(values = c( "black", "#6495ed"))+ geom_errorbar(data = df_sd, aes(x = Media, y = mean_max_cells, ymin=ymin, ymax=ymax, color = Media), width=0) + geom_jitter(data =df_points, aes(x =Media, y = max_cells_per_ul, color = Media), shape = 1, width = 0.114, fill = "white") +facet_grid(Species~ Temp, scales = "free_y") + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + ggtitle("Trial 2")
 
 ```
-ggsave("t2_maxcells_mean_dots.pdf", width = 5, height = 6)
 
-### stats
+### biomass stats
 
+#### Amac
 ```{r}
 amac_biomass <- df_points %>% dplyr::filter(Species == "Amac")
 amac_biomass$TempMedia <- paste(amac_biomass$Media, amac_biomass$Temp)
 ```
 
-Amac cold
+Amac biomass difference by media in **cold** temp treatment:
 ```{r}
 amac_biomass_cold_noB12 <- amac_biomass %>% dplyr::filter(TempMedia == "noB12 cold")
 amac_biomass_cold_full <- amac_biomass %>% dplyr::filter(TempMedia == "full cold")
 t.test(amac_biomass_cold_noB12$max_cells_per_ul, amac_biomass_cold_full$max_cells_per_ul)
 ```
-Amac Mid
+Amac biomass difference by media in **med** temp treatment:
 ```{r}
 amac_biomass_mid_noB12 <- amac_biomass %>% dplyr::filter(TempMedia == "noB12 med")
 amac_biomass_mid_full <- amac_biomass %>% dplyr::filter(TempMedia == "full med")
 t.test(amac_biomass_mid_noB12$max_cells_per_ul, amac_biomass_mid_full$max_cells_per_ul)
 ```
-Amac Hot
+Amac biomass difference by media in **hot** temp treatment:
 ```{r}
 amac_biomass_hot_noB12 <- amac_biomass %>% dplyr::filter(TempMedia == "noB12 hot")
 amac_biomass_hot_full <- amac_biomass %>% dplyr::filter(TempMedia == "full hot")
 t.test(amac_biomass_hot_noB12$max_cells_per_ul, amac_biomass_hot_full$max_cells_per_ul)
 ```
 
-Rpom
+#### Rpom
 ```{r}
 rpom_biomass <- df_points %>% dplyr::filter(Species == "Rpom")
 rpom_biomass$TempMedia <- paste(rpom_biomass$Media, rpom_biomass$Temp)
 ```
 
-Rpom cold
+Rpom biomass difference by media in **cold** temp treatment:
 ```{r}
 rpom_biomass_cold_noB12 <- rpom_biomass %>% dplyr::filter(TempMedia == "noB12 cold")
 rpom_biomass_cold_full <- rpom_biomass %>% dplyr::filter(TempMedia == "full cold")
 t.test(rpom_biomass_cold_noB12$max_cells_per_ul, rpom_biomass_cold_full$max_cells_per_ul)
 ```
-Rpom Mid
+Amac biomass difference by media in **mid** temp treatment:
 ```{r}
 rpom_biomass_mid_noB12 <- rpom_biomass %>% dplyr::filter(TempMedia == "noB12 med")
 rpom_biomass_mid_full <- rpom_biomass %>% dplyr::filter(TempMedia == "full med")
 t.test(rpom_biomass_mid_noB12$max_cells_per_ul, rpom_biomass_mid_full$max_cells_per_ul)
 ```
 
-Rpom Hot
+Amac biomass difference by media in **hot** temp treatment:
 ```{r}
 rpom_biomass_hot_noB12 <- rpom_biomass %>% dplyr::filter(TempMedia == "noB12 hot")
 rpom_biomass_hot_full <- rpom_biomass %>% dplyr::filter(TempMedia == "full hot")
@@ -845,21 +906,11 @@ kable((data.frame(results(amac_line_fits)) %>% select(Species, Temp, Rep, Media,
 ```
 
 
+Plot mean growth rates with raw data as points: 
 ```{r}
-#many_mus <- rbind( results(midhot_line_fits), results(cold_line_fits))
-many_mus <- results(all_line_fits)
-many_mus$Temp <- factor(many_mus$Temp, levels = c("cold" ,"med", "hot"), labels = c("cold", "mid", "hot"))
-many_mus$TempMedia <- paste(many_mus$Temp, many_mus$Media)
+many_mus <- rbind(results(amac_line_fits), results(rpom_line_fits))
+many_mus$Temp <- factor(many_mus$Temp, levels = c("cold", "med", "hot"))
 
-my_comparisons = list( c("cold full", "cold noB12"), c("mid full", "mid noB12"), c("hot full", "hot noB12"))
-
-many_mus %>% dplyr::filter(Species == "Amac") %>% ggplot(aes(x=Temp, y = mumax, color= Media)) + facet_grid(~Species) +geom_boxplot() + theme_bw() + scale_color_manual(values = c( "black", "#6495ed")) + theme(legend.position = "bottom")+ stat_compare_means(label.y = c(0.8, 1.0, 1.6), method = "t.test", group.by = "Temp")
-
-#label = "p.signif"
-```
-
-
-```{r}
 df_mean <- data.frame(many_mus %>% dplyr::filter(Species == "Amac") %>% group_by(Species, Temp, Media) %>%
   dplyr::summarize(mean_mumax = mean(mumax), sd = sd(mumax)) %>% ungroup())
 
@@ -870,13 +921,6 @@ df_points <- data.frame(many_mus %>% dplyr::filter(Species == "Amac"))
   
 
 amac_mumax<- ggplot() + geom_point(data = df_mean, aes(x = Media, y = mean_mumax, color = Media), size =10, shape ="-") + theme_bw() + scale_color_manual(values = c( "black", "#6495ed"))+ geom_errorbar(data = df_sd, aes(x = Media, y = mean_mumax, ymin=ymin, ymax=ymax, color = Media), width=0) + geom_jitter(data =df_points, aes(x =Media, y = mumax, color = Media), shape = 1, width = 0.114, fill = "white") +facet_grid(~Temp) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + ggtitle("A. macleodii") +ylim(0.5, 1.7)
-
-amac_mumax
-```
-
-
-```{r}
-many_mus %>% dplyr::filter(Species == "Rpom") %>% ggplot(aes(x=Temp, y = mumax, color= Media)) + facet_grid(~Species) +geom_boxplot() + theme_bw() + scale_color_manual(values = c( "black", "#6495ed")) + theme(legend.position = "bottom")+ stat_compare_means(label.y = c(0.8, 1.0, 1.6), method = "t.test", group.by = "Temp") + ylim(0.5, 1.8)
 ```
 
 
@@ -891,63 +935,60 @@ df_points <- data.frame(many_mus %>% dplyr::filter(Species == "Rpom"))
   
 
 rpom_mumax <- ggplot() + geom_point(data = df_mean, aes(x = Media, y = mean_mumax, color = Media), size =10, shape ="-") + theme_bw() + scale_color_manual(values = c( "black", "#6495ed"))+ geom_errorbar(data = df_sd, aes(x = Media, y = mean_mumax, ymin=ymin, ymax=ymax, color = Media), width=0) + geom_jitter(data =df_points, aes(x =Media, y = mumax, color = Media), shape = 1, width = 0.114, fill = "white") +facet_grid(~Temp) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + ggtitle("R. pomeroyi") +ylim(0.4, 1.9)
-
-rpom_mumax
 ```
 
 ```{r}
-library(patchwork)
 (amac_mumax / rpom_mumax) + plot_layout(guides = "collect")
 ```
 
-ggsave("mumax_mean_dots.pdf", width = 5, height = 6)
+### Growth rate comparison stats
 
-
-```{r}
-many_mus %>% ggplot(aes(x=Temp, y = mumax, color= Media)) + facet_grid(~Species) +geom_boxplot() + theme_bw() + scale_color_manual(values = c( "black", "#6495ed")) + theme(legend.position = "bottom")+ stat_compare_means(label.y = c(0.8, 1.0, 1.6), method = "t.test", group.by = "Temp",  label = "p.signif") + ylim(0.5, 1.9) + theme(legend.position = "right")
-```
-
-
+#### Amac
 ```{r}
 amac_mu <- many_mus %>% dplyr::filter(Species == "Amac")
 amac_mu$TempMedia <- paste(amac_mu$Media, amac_mu$Temp)
 ```
 
-
+Amac growth rate difference by media in **cold** temp treatment:
 ```{r}
 #cold
 amac_mu_cold_noB12 <- amac_mu %>% dplyr::filter(TempMedia == "noB12 cold")
 amac_mu_cold_full <- amac_mu %>% dplyr::filter(TempMedia == "full cold")
 t.test(amac_mu_cold_noB12$mumax, amac_mu_cold_full$mumax)
 ```
+Amac growth rate difference by media in **mid** temp treatment:
 ```{r}
 #warm
-amac_mu_warm_noB12 <- amac_mu %>% dplyr::filter(TempMedia == "noB12 mid")
-amac_mu_warm_full <- amac_mu %>% dplyr::filter(TempMedia == "full mid")
+amac_mu_warm_noB12 <- amac_mu %>% dplyr::filter(TempMedia == "noB12 med")
+amac_mu_warm_full <- amac_mu %>% dplyr::filter(TempMedia == "full med")
 t.test(amac_mu_warm_noB12$mumax, amac_mu_warm_full$mumax)
 ```
 
-
+Amac growth rate difference by media in **hot** temp treatment:
 ```{r}
 #warm
 amac_mu_hot_noB12 <- amac_mu %>% dplyr::filter(TempMedia == "noB12 hot")
 amac_mu_hot_full <- amac_mu %>% dplyr::filter(TempMedia == "full hot")
 t.test(amac_mu_hot_noB12$mumax, amac_mu_hot_full$mumax)
 ```
-Rpom Hot
+####Rpom
+
+Rpom growth rate difference by media in **hot** temp treatment:
 ```{r}
 rpom_mu <- many_mus %>% dplyr::filter(Species == "Rpom")
+rpom_mu$TempMedia <- paste(rpom_mu$Temp, rpom_mu$Media)
+
 rpom_mu_hot_noB12 <- rpom_mu %>% dplyr::filter(TempMedia == "hot noB12")
 rpom_mu_hot_full <- rpom_mu %>% dplyr::filter(TempMedia == "hot full")
 t.test(rpom_mu_hot_noB12$mumax, rpom_mu_hot_full$mumax)
 ```
-Rpom Mid
+Rpom growth rate difference by media in **mid** temp treatment:
 ```{r}
-rpom_mu_mid_noB12 <- rpom_mu %>% dplyr::filter(TempMedia == "mid noB12")
-rpom_mu_mid_full <- rpom_mu %>% dplyr::filter(TempMedia == "mid full")
+rpom_mu_mid_noB12 <- rpom_mu %>% dplyr::filter(TempMedia == "med noB12")
+rpom_mu_mid_full <- rpom_mu %>% dplyr::filter(TempMedia == "med full")
 t.test(rpom_mu_mid_noB12$mumax, rpom_mu_mid_full$mumax)
 ```
-Rpom Cool
+Rpom growth rate difference by media in **cool** temp treatment:
 ```{r}
 rpom_mu_cool_noB12 <- rpom_mu %>% dplyr::filter(TempMedia == "cold noB12")
 rpom_mu_cool_full <- rpom_mu %>% dplyr::filter(TempMedia == "cold full")
@@ -956,7 +997,7 @@ t.test(rpom_mu_cool_noB12$mumax, rpom_mu_cool_full$mumax)
 ## cell size 
 
 ### Mean
-```{r, cache=TRUE}
+```{r, eval = FALSE}
 FSC1<- data.frame(fsApply(filteredresult_2,each_col,mean))
 FSC2<- data.frame(fsApply(fr2_2,each_col,mean))
 FSC3<- data.frame(fsApply(fr2_3,each_col,mean))
@@ -1009,7 +1050,18 @@ fscat2 <- Fscatter %>%
     Time_point == 13 ~ 24
     ))  
 
-fscat2 %>% ggplot(aes(x = hours, y = FSC.A, color = Temp, shape = Media)) + facet_grid(Temp~Species) + geom_point(size =2, alpha = .7) + theme_light() + scale_color_manual(values = c("#2D55CC", "#FAAB33", "#FF4041")) +
+
+write.csv(fscat2, "fscatter_rnd2.csv", row.names = FALSE)
+
+```
+
+
+```{r}
+fscat2<- read.csv("fscatter_rnd2.csv")
+
+fscat2$Temp <- factor(fscat2$Temp, levels = c("cold", "med", "hot"))
+
+fscat2 %>% dplyr::filter(!(Temp == "cold" &hours ==2)) %>% dplyr::filter(!(Temp == "hot" & hours ==1)) %>% ggplot(aes(x = hours, y = FSC.A, color = Temp, shape = Media)) + facet_grid(Temp~Species) + geom_point(size =2, alpha = .7) + theme_light() + scale_color_manual(values = c("#2D55CC", "#FAAB33", "#FF4041")) +
     theme(
       strip.text.x = element_text(
         size = 12, color = "white", face = "bold.italic"
@@ -1017,12 +1069,10 @@ fscat2 %>% ggplot(aes(x = hours, y = FSC.A, color = Temp, shape = Media)) + face
 ```
 
 ```{r}
-fscat2  %>% 
-  group_by(hours, Media, Species, Temp) %>%
+fscat2 %>% dplyr::filter(!(Temp == "cold" &hours ==2)) %>% dplyr::filter(!(Temp == "hot" & hours ==2)) %>% group_by(hours, Media, Species, Temp) %>%
   dplyr::summarize(mean_size = mean(FSC.A), sd = sd(FSC.A)) %>% ggplot(aes(x = hours, y = mean_size, color = Temp, shape = Media)) + facet_grid(Temp~Species) + geom_point(size =2, alpha = .7) + theme_bw() + scale_color_manual(values = c("#2D55CC", "#FAAB33", "#FF4041"))  +geom_line(aes(linetype = Media))+
   geom_errorbar(aes(ymin=mean_size-sd, ymax=mean_size+sd), width=0) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 ```
-ggsave("t2_mean_FSC.pdf", width = 7, height = 6)
 
 ```{r}
 fscatt1$trial <- "1"
@@ -1030,28 +1080,45 @@ fscat2$trial <- "2"
 
 fscatt1_2 <- rbind(fscatt1, fscat2) %>% filter(hours == 24) %>% filter(Temp == "hot") %>% filter(Species == "Amac")
 
+
+df_mean <- data.frame(fscatt1_2 %>% 
+  group_by(Media, trial) %>%
+  dplyr::summarize(meanFSc = mean(FSC.A), sd = sd(FSC.A)) %>% ungroup())
+
+df_sd <- data.frame(fscatt1_2 %>% 
+  group_by(Media, trial) %>%
+  dplyr::summarize(meanFSc = mean(FSC.A), sd = sd(FSC.A)) %>% ungroup()  %>% mutate(ymin = meanFSc-sd) %>% mutate(ymax =meanFSc+sd))
+
+df_points <- fscatt1_2
+  
+
+ ggplot() + geom_point(data = df_mean, aes(x = Media, y = meanFSc, color = Media), size =10, shape ="-") + theme_bw() + scale_color_manual(values = c( "black", "#6495ed"))+ geom_errorbar(data = df_sd, aes(x = Media, y = meanFSc, ymin=ymin, ymax=ymax, color = Media), width=0) + geom_jitter(data =df_points, aes(x =Media, y = FSC.A, color = Media), shape = 1, width = 0.114, fill = "white") +facet_grid(~trial) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + ggtitle("Amac Cell Size at 24 hours")
 ```
 
+## B12 Measurements
 
-# B12 Measurements
+### final cell counts
 
-## final cell counts
+To get number of cells at time of sacrifice to which to normalize b12 mas spec measurements
 
-to get number of cells at time of sacrifice to which to normalize b12 mas spec measurements
-
-```{r}
-results <- filtered_ps9
-
-results$vol_ml <- as.numeric(results$vol) /1000 /1000
-
-results$cells_per_ml  <-   results$Count /  results$vol_ml
-
-results <- results %>% separate(well,c("Species", "Media", "Temp", "Rep", "Time_point") )
-results$Temp <- factor(results$Temp, levels = c("cold", "med", "hot"))
+```{r, eval = FALSE}
+write.csv(filtered_ps9, "vols.csv", row.names = FALSE)
 ```
 
 ```{r}
-r4<- results %>% 
+
+vols<- read.csv("vols.csv")
+
+vols$vol_ml <- as.numeric(vols$vol) /1000 /1000
+
+vols$cells_per_ml  <-   vols$Count /  vols$vol_ml
+
+vols <- vols %>% separate(well,c("Species", "Media", "Temp", "Rep", "Time_point") )
+vols$Temp <- factor(vols$Temp, levels = c("cold", "med", "hot"))
+```
+
+```{r}
+r4<- vols %>% 
   mutate(hours = case_when(
     Time_point == 10 ~ 9)) %>% filter(Species == "Rpom") %>% filter(Media == "noB12") %>% filter(Temp != "cold")
 
@@ -1060,8 +1127,12 @@ r4$trial <- "2"
 r4$Tube <- c(19,20,21,31,32,33)
 ```
 
+```{r, eval = FALSE}
+write.csv(filtered_ps12, "cold_final.csv", row.names = FALSE)
+```
+
 ```{r}
-results <- filtered_ps12
+results <- read.csv("cold_final.csv")
 
 results$vol_ml <- as.numeric(results$vol) /1000 /1000 #B12 data is mg/ml so getting cells /ml instedd of cells/ml
 
@@ -1089,7 +1160,10 @@ df2 <- rbind(data.frame(r4 %>% group_by(hours, Media, Species, Temp) %>%
   dplyr::summarize(mean_cells_per_ml = mean(cells_per_ml), sd = sd(cells_per_ml)) %>% ungroup() %>% mutate(ymin = mean_cells_per_ml-sd) %>% mutate(ymax = mean_cells_per_ml+sd)))
 
 df3 <- rbind(r4, r5)
+```
 
+Check that final cell counts look right: 
+```{r}
 ggplot() + geom_point(data = df1, aes(x = Temp, y = mean_cells_per_ml, color = Temp), size =10, shape ="-") + theme_light() + scale_color_manual(values = c("#2D55CC", "#FAAB33", "#FF4041")) +
     theme(
       strip.text.x = element_text(
@@ -1103,7 +1177,7 @@ print(df3 %>% select(Species, Media, Temp, Rep, Tube, cells_per_ml))
 ```
 These cell count values were added to the spreadsheet with B12 results.
 
-## plot B12 concentrations normalized to cell counts 
+### plot B12 concentrations normalized to cell counts 
 
 ```{r}
 cob<- read.csv("cobalamin_supernatant_pellets_t2.csv")
@@ -1132,9 +1206,8 @@ cob %>%  ggplot(aes(x=S_P, y=ug_per_cell)) + geom_boxplot(aes(color = Temp)) + s
   stat_compare_means(label.y = c(3e-06), method = "t.test", group.by = "S_P")
 
 ```
-ggsave("b12_normalized.pdf", width = 4, height = 3)
 
-** convenient because of ggplot separates treatments, but boxplots are not appropriate for n=3 ... **
+***convenient because ggplot separates treatments, but boxplots are not appropriate for n=3 ...***
 
 ```{r}
 df4 <- data.frame(cob %>% group_by(S_P, Temp) %>%
@@ -1155,7 +1228,7 @@ ggplot() + geom_point(data = df4, aes(x = Temp, y = mean_ug_per_cell, color = Te
 
 
 
-## Stats
+### B12 comparison stats
 
 Two-Way ANOVA - Temperature and Supernatant/Pellet
 
@@ -1164,23 +1237,22 @@ cob$TempPellet <- paste(cob$Temp, cob$S_P)
 anova_1 <- aov(ug_per_cell~Temp+S_P, data = cob)
 summary(anova_1)
 ```
-```{r}
-TukeyHSD(anova_1, conf.level=.95)
-```
 
-
+Cool v. Warm: 
 ```{r}
 cob_coolP <- cob %>% dplyr::filter(Temp == "cool") %>% dplyr::filter(S_P == "P")
 cob_warmP <- cob%>% dplyr::filter(Temp == "warm") %>% dplyr::filter(S_P == "P")
 
 t.test(cob_coolP$ug_per_cell,cob_warmP$ug_per_cell)
 ```
-
+cool v. hot:
 ```{r}
 cob_hotP <- cob %>% dplyr::filter(Temp == "hot") %>% dplyr::filter(S_P == "P")
 
 t.test(cob_coolP$ug_per_cell, cob_hotP$ug_per_cell)
 ```
+
+Supernatant v. Pellet: 
 ```{r}
 cob_S <- cob%>% dplyr::filter(S_P == "S")
 cob_P <- cob %>% dplyr::filter(S_P == "P")
