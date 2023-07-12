@@ -7,5 +7,5 @@ The code for the main analyses is available as an Rmarkdown file: Flow_Cytometry
 
 The same file is also available as an interactive .html: https://maggimars.github.io/bactB12/Flow_Cytometry_Analysis.html
 
-The full raw dataset is available on Zenodo: xxxx (coming soon).
+The full raw dataset is available on Zenodo: https://doi.org/10.5281/zenodo.8133026
 
