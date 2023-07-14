@@ -254,6 +254,25 @@ r2_t1 %>%
   geom_errorbar(aes(ymin=mean_cells_per_ul-sd, ymax=mean_cells_per_ul+sd), width=0) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+ scale_y_log10()
 ```
 
+```{r}
+results_Amac_Hot_Full <- r2_t1 %>% group_by(hours, Media, Species, Temp) %>%
+  dplyr::summarize(mean_cells_per_ul = mean(cells_per_ul), sd = sd(cells_per_ul)) %>% dplyr::filter(Media == "full") %>%  dplyr::filter(Species == "Amac") %>% dplyr::filter(Temp == "hot")
+
+print(results_Amac_Hot_Full)
+
+results_Amac_Hot_noB12 <- r2_t1 %>% group_by(hours, Media, Species, Temp) %>%
+  dplyr::summarize(mean_cells_per_ul = mean(cells_per_ul), sd = sd(cells_per_ul)) %>% dplyr::filter(Media == "noB12") %>%  dplyr::filter(Species == "Amac") %>% dplyr::filter(Temp == "hot")
+
+print(results_Amac_Hot_noB12)
+
+```
+
+```{r}
+( 43230.92 - 18542.19 ) / 43230.92
+```
+
+
+
 ## Max cell counts (biomass)
 
 Get and plot maximum cell concentrations:
@@ -277,6 +296,8 @@ df_points <- data.frame(r2_t1 %>%
 ggplot() + geom_point(data = df_mean, aes(x = Media, y = mean_max_cells, color = Media), size =10, shape ="-") + theme_bw() + scale_color_manual(values = c( "black", "#6495ed"))+ geom_errorbar(data = df_sd, aes(x = Media, y = mean_max_cells, ymin=ymin, ymax=ymax, color = Media), width=0) + geom_jitter(data =df_points, aes(x =Media, y = max_cells_per_ul, color = Media), shape = 1, width = 0.114, fill = "white") +facet_grid(Species~ Temp, scales = "free_y") + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + ggtitle("Trial 1")
 
 ```
+
+
 
 
 ### biomass stats
@@ -757,15 +778,15 @@ r2 %>%
 ```
 
 ```{r}
-results_Rpom_Hot_Full <- r2 %>% group_by(hours, Media, Species, Temp) %>%
+results_Amac_Hot_Full <- r2 %>% group_by(hours, Media, Species, Temp) %>%
   dplyr::summarize(mean_cells_per_ul = mean(cells_per_ul), sd = sd(cells_per_ul)) %>% dplyr::filter(Media == "full") %>%  dplyr::filter(Species == "Amac") %>% dplyr::filter(Temp == "hot")
 
-print(results_Rpom_Hot_Full)
+print(results_Amac_Hot_Full)
 
-results_Rpom_Hot_noB12 <- r2 %>% group_by(hours, Media, Species, Temp) %>%
+results_Amac_Hot_noB12 <- r2 %>% group_by(hours, Media, Species, Temp) %>%
   dplyr::summarize(mean_cells_per_ul = mean(cells_per_ul), sd = sd(cells_per_ul)) %>% dplyr::filter(Media == "noB12") %>%  dplyr::filter(Species == "Amac") %>% dplyr::filter(Temp == "hot")
 
-print(results_Rpom_Hot_noB12)
+print(results_Amac_Hot_noB12)
 
 ```
 
@@ -1092,8 +1113,26 @@ df_sd <- data.frame(fscatt1_2 %>%
 df_points <- fscatt1_2
   
 
- ggplot() + geom_point(data = df_mean, aes(x = Media, y = meanFSc, color = Media), size =10, shape ="-") + theme_bw() + scale_color_manual(values = c( "black", "#6495ed"))+ geom_errorbar(data = df_sd, aes(x = Media, y = meanFSc, ymin=ymin, ymax=ymax, color = Media), width=0) + geom_jitter(data =df_points, aes(x =Media, y = FSC.A, color = Media), shape = 1, width = 0.114, fill = "white") +facet_grid(~trial) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + ggtitle("Amac Cell Size at 24 hours")
+ggplot() + geom_point(data = df_mean, aes(x = Media, y = meanFSc, color = Media), size =10, shape ="-") + theme_bw() + scale_color_manual(values = c( "black", "#6495ed"))+ geom_errorbar(data = df_sd, aes(x = Media, y = meanFSc, ymin=ymin, ymax=ymax, color = Media), width=0) + geom_jitter(data =df_points, aes(x =Media, y = FSC.A, color = Media), shape = 1, width = 0.114, fill = "white") +facet_grid(~trial) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + ggtitle("Amac Cell Size at 24 hours")
 ```
+
+### Cell size stats
+Trial 1
+```{r}
+amac_cellsize_full <- df_points %>% dplyr::filter(trial == 1) %>% dplyr::filter(Media == "full")
+amac_cellsize_noB12 <- df_points %>% dplyr::filter(trial == 1) %>% dplyr::filter(Media == "noB12")
+
+t.test(amac_cellsize_full$FSC.A, amac_cellsize_noB12$FSC.A)
+```
+
+Trial 2
+```{r}
+amac_cellsize_full <- df_points %>% dplyr::filter(trial == 2) %>% dplyr::filter(Media == "full")
+amac_cellsize_noB12 <- df_points %>% dplyr::filter(trial == 2) %>% dplyr::filter(Media == "noB12")
+
+t.test(amac_cellsize_full$FSC.A, amac_cellsize_noB12$FSC.A)
+```
+
 
 ## B12 Measurements
 
