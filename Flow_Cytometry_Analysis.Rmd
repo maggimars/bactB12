@@ -1136,6 +1136,50 @@ t.test(amac_cellsize_full$FSC.A, amac_cellsize_noB12$FSC.A)
 
 ## B12 Measurements
 
+### Standard Curve
+
+```{r}
+stdcurve <- read.csv("cobalamin_standard_curve.csv")
+```
+
+```{r}
+calcurve <-ggplot(stdcurve, aes(x=cynanocobalamin_ug_per_L, y=Total_Fragment_Area)) +geom_smooth(method = "lm") +geom_point(shape = 21) +theme_bw()+ theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank()) + ylab("Total fragment area") + xlab("Cyanocobalamin (µg L-1)")
+
+calcurve
+```
+
+
+```{r}
+zoom<- ggplot(stdcurve, aes(x=cynanocobalamin_ug_per_L, y=Total_Fragment_Area)) +geom_smooth(method = "lm") +geom_point(shape = 21)+ ylim(c(0,1e+09)) + xlim(c(0,40)) +theme_bw()+ theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank())
+
+zoom
+```
+
+
+
+```{r}
+dbl_zoom<- ggplot(stdcurve, aes(x=cynanocobalamin_ug_per_L, y=Total_Fragment_Area)) +geom_smooth(method = "lm") +geom_point(shape = 21)+ ylim(c(0,6e+07)) + xlim(c(0,4)) +theme_bw()+ theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank()) +ylab("") +xlab("")
+
+dbl_zoom
+```
+
+```{r}
+linear<- lm(Total_Fragment_Area ~ cynanocobalamin_ug_per_L, data=stdcurve)
+summary(linear)
+
+```
+
+
+```{r}
+with_inset <- calcurve+ 
+    annotation_custom(grob=ggplotGrob(dbl_zoom), 
+                      ymin = 4.5e+09, ymax=8e+09, xmin=-Inf, xmax=200) 
+
+with_inset
+```
+
+ggsave("calcurve.pdf", width = 6, height = 4)
+
 ### final cell counts
 
 To get number of cells at time of sacrifice to which to normalize b12 mas spec measurements
@@ -1226,10 +1270,11 @@ str(cob)
 normalize to mls and # of cells / ml
 
 ```{r}
-cob$conc_mg_ml_in_extract <- cob$conc_mgL_in_final_extract / 1000
-cob$mg_in_sample <- cob$conc_mg_ml_in_extract *  cob$Volume_mL
+cob$conc_ug_ml_in_extract <- cob$conc_mgL_in_final_extract / 1000
+cob$ug_in_sample <- cob$conc_ug_ml_in_extract *  cob$Volume_mL
 cob$cells_per_sample <- cob$Volume_mL * cob$cells.perml
-cob$ug_per_cell <- cob$mg_in_sample / cob$cells_per_sample * 1000
+cob$ug_per_cell <- cob$ug_in_sample / cob$cells_per_sample
+cob$ng_per_cell <- cob$ug_per_cell * 1000
 ```
 
 
@@ -1237,7 +1282,7 @@ cob$ug_per_cell <- cob$mg_in_sample / cob$cells_per_sample * 1000
 
 cob$Temp <- factor(cob$Temp, levels = c("cool", "warm", "hot"))
 
-cob %>%  ggplot(aes(x=S_P, y=ug_per_cell)) + geom_boxplot(aes(color = Temp)) + scale_color_manual(values = c("#2D55CC", "#FAAB33", "#FF4041")) + theme_light() +
+cob %>%  ggplot(aes(x=S_P, y=ng_per_cell)) + geom_boxplot(aes(color = Temp)) + scale_color_manual(values = c("#2D55CC", "#FAAB33", "#FF4041")) + theme_light() +
     theme(
       strip.text.x = element_text(
         size = 12, color = "white", face = "bold.italic"
@@ -1255,12 +1300,23 @@ df4 <- data.frame(cob %>% group_by(S_P, Temp) %>%
 df5 <- data.frame(cob %>% group_by(S_P, Temp) %>%
   dplyr::summarize(mean_ug_per_cell = mean(ug_per_cell), sd = sd(ug_per_cell)) %>% ungroup()) %>% mutate(ymin = mean_ug_per_cell-sd) %>% mutate(ymax = mean_ug_per_cell+sd)
 
-ggplot() + geom_point(data = df4, aes(x = Temp, y = mean_ug_per_cell, color = Temp), size =10, shape ="-") + theme_bw() + scale_color_manual(values = c("#2D55CC", "#FAAB33", "#FF4041")) + geom_errorbar(data = df5, aes(x = Temp, y = mean_ug_per_cell, ymin=ymin, ymax=ymax, color = Temp), width=0) + geom_jitter(data =cob, aes(x =Temp, y = ug_per_cell, color = Temp), shape = 1, width = 0.114, fill = "white") +facet_grid(~S_P) +ylim(	-1.124685e-07, 3e-06) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+ggplot() + geom_point(data = df4, aes(x = Temp, y = mean_ug_per_cell, color = Temp), size =10, shape ="-") + theme_bw() + scale_color_manual(values = c("#2D55CC", "#FAAB33", "#FF4041")) + geom_errorbar(data = df5, aes(x = Temp, y = mean_ug_per_cell, ymin=ymin, ymax=ymax, color = Temp), width=0) + geom_jitter(data =cob, aes(x =Temp, y = ug_per_cell, color = Temp), shape = 1, width = 0.114, fill = "white") +facet_grid(~S_P)  + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) #+ylim(	-1.124685e-07, 3e-06)
 
 ```
 
 ```{r}
-ggplot() + geom_point(data = df4, aes(x = Temp, y = mean_ug_per_cell, color = Temp), size =12, shape ="-") + theme_light() + scale_color_manual(values = c("#2D55CC", "#FAAB33", "#FF4041")) + geom_errorbar(data = df5, aes(x = Temp, y = mean_ug_per_cell, ymin=ymin, ymax=ymax, color = Temp), width=0) + geom_dotplot(data =cob, aes(x =Temp, y = ug_per_cell, color = Temp), shape = 1, dotsize=0.5, binaxis='y', stackdir = 'center', fill = "white" ) +facet_grid(~S_P) +ylim(	-1.124685e-07, 3e-06) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+df4 <- data.frame(cob %>% group_by(S_P, Temp) %>%
+  dplyr::summarize(mean_ng_per_cell = mean(ng_per_cell), sd = sd(ng_per_cell)) %>% ungroup())
+
+df5 <- data.frame(cob %>% group_by(S_P, Temp) %>%
+  dplyr::summarize(mean_ng_per_cell = mean(ng_per_cell), sd = sd(ng_per_cell)) %>% ungroup()) %>% mutate(ymin = mean_ng_per_cell-sd) %>% mutate(ymax = mean_ng_per_cell+sd)
+
+ggplot() + geom_point(data = df4, aes(x = Temp, y = mean_ng_per_cell, color = Temp), size =10, shape ="-") + theme_bw() + scale_color_manual(values = c("#2D55CC", "#FAAB33", "#FF4041")) + geom_errorbar(data = df5, aes(x = Temp, y = mean_ng_per_cell, ymin=ymin, ymax=ymax, color = Temp), width=0) + geom_jitter(data =cob, aes(x =Temp, y = ng_per_cell, color = Temp), shape = 1, width = 0.114, fill = "white") +facet_grid(~S_P)  + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) #+ylim(	-1.124685e-07, 3e-06)
+
+```
+
+```{r}
+ggplot() + geom_point(data = df4, aes(x = Temp, y = mean_ug_per_cell, color = Temp), size =12, shape ="-") + theme_light() + scale_color_manual(values = c("#2D55CC", "#FAAB33", "#FF4041")) + geom_errorbar(data = df5, aes(x = Temp, y = mean_ug_per_cell, ymin=ymin, ymax=ymax, color = Temp), width=0) + geom_dotplot(data =cob, aes(x =Temp, y = ug_per_cell, color = Temp), shape = 1, dotsize=0.5, binaxis='y', stackdir = 'center', fill = "white" ) +facet_grid(~S_P) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 ```
 
 
